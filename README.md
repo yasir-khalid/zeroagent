@@ -1,5 +1,7 @@
 ### Python agents built from scratch — no frameworks, just raw API calls.
 
+Builing Agents in Python using OpenAI SDK for calling the API in OpenAI compatible format; and connected to Openrouter models. To use, set an environment variable: `OPENROUTER_API_KEY` and that allows you use different models available across Openrouter. 
+
 ```
 python zeroagent/main.py
  _____                   ___                    __ 
