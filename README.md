@@ -6,7 +6,7 @@ Building a coding-agent runtime from first principles to study context engineeri
 To use, set an environment variable: `OPENROUTER_API_KEY` and that allows you use different models available across Openrouter. 
 
 ```
-python zeroagent/main.py
+python3 cli.py
  _____                   ___                    __ 
 /__  /  ___  _________  /   | ____ ____  ____  / /_
   / /  / _ \/ ___/ __ \/ /| |/ __ `/ _ \/ __ \/ __/
@@ -18,3 +18,11 @@ python zeroagent/main.py
 [22:19:33] ⛏ Initiating tool call: `search_gutenberg_books` 
 [22:19:37] Agent processing finished
 ```
+
+## Project structure
+
+The reusable agent loop and conversation context live in `agent/`. The remaining
+top-level packages are scaffolding for the harness capabilities currently being
+explored: tools, runtime isolation, state, verification, and evaluations.
+`zeroagent/main.py` remains as a compatibility entry point for the original
+Gutenberg demo, so `python3 zeroagent/main.py` also continues to work.

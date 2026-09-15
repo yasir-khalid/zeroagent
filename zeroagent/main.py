@@ -1,101 +1,28 @@
-import httpx
-from httpx import Timeout
-from openai import OpenAI
-from openai.types.chat.chat_completion import ChatCompletion
-import os
-from rich import print
-from rich.console import Console
+"""Compatibility entry point for the original ZeroAgent demo."""
 
-from typing import List
+from __future__ import annotations
 
-from tools import getGutenbergBooksTool, search_gutenberg_books
-import json
-from pyfiglet import figlet_format
-from termcolor import colored
+import sys
+from pathlib import Path
 
-from enum import Enum
+# Keep `python zeroagent/main.py` working as documented in the README.
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-class OpenAIResponseFinishReason(Enum):
-    TOOL_CALLS = "tool_calls"
-    STOP = "stop"
-
-class Agent:
-    def __init__(self, model: str = "google/gemini-3-flash-preview", system: str = "", tools: list = None) -> None:
-        self.model = model
-        self.system = system
-        self.messages: List = []
-        self.console = Console()
-        self.tools = tools if tools is not None else []
-        self.OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY")
-        self.AGENT_MAX_TURNS: int = 10
+from agent.loop import Agent
+from zeroagent.tools import getGutenbergBooksTool, search_gutenberg_books
 
 
-        self.client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=self.OPENROUTER_API_KEY,
-        )
-        if self.system:
-            self.messages.append({"role": "system", "content": system})
-
-        text = figlet_format("ZeroAgent", font="slant")
-        print(f"[red]{text}[/red]")
-        self.console.print(self.model, style="bold red")
-
-    def __call__(self, message=""):
-        if message:
-            self.messages.append({"role": "user", "content": message})
-
-        final_assistant_content = self.execute()
-
-        if final_assistant_content:
-            self.messages.append({"role": "assistant", "content": final_assistant_content})
-
-        return final_assistant_content
-
-    def execute(self) -> str:
-        # Keep looping until the model provides a final text response (not tool calls)
-        for _ in range(self.AGENT_MAX_TURNS):
-            with self.console.status("Running Agent ..") as status:
-                response: ChatCompletion = self.client.chat.completions.create(
-                    model = self.model,
-                    tools = self.tools,
-                    messages = self.messages
-                )
-
-                for choice in response.choices:
-                    self.messages.append(choice.message) # append the full assistant message object <type: ChatCompletionMessage>
-                    if choice.finish_reason == OpenAIResponseFinishReason.TOOL_CALLS.value and choice.message.tool_calls:
-                        self.messages.append(choice.message)
-                        for tool_call in choice.message.tool_calls:
-                            self.console.log(f"⛏ Initiating tool call: `{tool_call.function.name}`")
-                            function_name = tool_call.function.name
-                            function_args = json.loads(tool_call.function.arguments)
-                            if function_name in globals() and callable(globals()[function_name]):
-                                function_to_call = globals()[function_name]
-                                try:
-                                    executed_output = function_to_call(**function_args)
-                                except Exception as e:
-                                    executed_output = {"error": str(e)}
-                            else:
-                                executed_output = {"error": f"Unknown tool: {function_name}"}
-
-                            self.messages.append({
-                                "role": "tool",
-                                "tool_call_id": tool_call.id,
-                                "content": json.dumps(executed_output),
-                            })
-                                
-
-                    elif choice.finish_reason == OpenAIResponseFinishReason.STOP.value and choice.message.content:
-                        self.console.log(f"Agent processing finished")
-                        return choice.message.content
-
-if __name__ == "__main__":
-    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+def main() -> None:
+    """Run the Gutenberg-search demonstration agent."""
     agent = Agent(
-        model = "stepfun/step-3.5-flash:free",
+        model="stepfun/step-3.5-flash:free",
         system="You're a helpful librarian who fetches books from the remote Gutendex library",
-        tools=[getGutenbergBooksTool]
+        tools=[getGutenbergBooksTool],
+        tool_handlers={"search_gutenberg_books": search_gutenberg_books},
     )
     agent("Hello how are you?")
-    response = agent("What are the titles of some James Joyce books?")
+    agent("What are the titles of some James Joyce books?")
+
+if __name__ == "__main__":
+    main()
