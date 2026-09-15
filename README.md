@@ -1,6 +1,9 @@
-### Python agents built from scratch — no frameworks, just raw API calls.
+### ZeroAgent: Coding Agent Runtime / Harness Lab
+##### Python agents built from scratch — no frameworks, just raw API calls.
 
-Builing Agents in Python using OpenAI SDK for calling the API in OpenAI compatible format; and connected to Openrouter models. To use, set an environment variable: `OPENROUTER_API_KEY` and that allows you use different models available across Openrouter. 
+Building a coding-agent runtime from first principles to study context engineering, tool/ACI design, sandboxed execution, checkpointing, agent evaluation and verification loops. Benchmarking different harness architectures against real software-engineering tasks.
+
+To use, set an environment variable: `OPENROUTER_API_KEY` and that allows you use different models available across Openrouter. 
 
 ```
 python zeroagent/main.py
