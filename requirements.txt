@@ -1,3 +1,5 @@
 httpx
 pydantic
 rich
+pyfiglet
+termcolor

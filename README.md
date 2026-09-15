@@ -3,6 +3,8 @@
 
 Building a coding-agent runtime from first principles to study context engineering, tool/ACI design, sandboxed execution, checkpointing, agent evaluation and verification loops. Benchmarking different harness architectures against real software-engineering tasks.
 
+Simply put, an agent is a loop of language-model calls that simulates a thought process.
+
 To use, set an environment variable: `OPENROUTER_API_KEY` and that allows you use different models available across Openrouter. 
 
 ```
@@ -26,3 +28,7 @@ top-level packages are scaffolding for the harness capabilities currently being
 explored: tools, runtime isolation, state, verification, and evaluations.
 `zeroagent/main.py` remains as a compatibility entry point for the original
 Gutenberg demo, so `python3 zeroagent/main.py` also continues to work.
+
+## Focus
+
+ReAct: Reasoning and Acting by LLM Agents
