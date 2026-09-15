@@ -10,15 +10,9 @@ from typing import Any
 
 from openai import OpenAI
 from openai.types.chat.chat_completion import ChatCompletion
-from rich import print
 from rich.console import Console
 
 from .context import ConversationContext
-
-try:
-    from pyfiglet import figlet_format
-except ImportError:  # The banner is cosmetic; do not make it a runtime dependency.
-    figlet_format = None
 
 
 class OpenAIResponseFinishReason(Enum):
@@ -38,8 +32,6 @@ class Agent:
     ) -> None:
         self.model = model
         self.context = ConversationContext(system)
-        # Kept as a public alias for callers of the original prototype.
-        self.messages = self.context.messages
         self.console = Console()
         self.tools = tools or []
         self.tool_handlers = dict(tool_handlers or {})
@@ -51,18 +43,10 @@ class Agent:
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
 
-        text = figlet_format("ZeroAgent", font="slant") if figlet_format else "ZeroAgent"
-        print(f"[red]{text}[/red]")
-        self.console.print(self.model, style="bold red")
-
     def __call__(self, message: str = "") -> str | None:
         if message:
             self.context.append("user", message)
-
-        final_assistant_content = self.execute()
-        if final_assistant_content:
-            self.context.append("assistant", final_assistant_content)
-        return final_assistant_content
+        return self.execute()
 
     def execute(self) -> str | None:
         """Run until the model responds with text or the turn limit is reached."""
@@ -71,12 +55,15 @@ class Agent:
                 response: ChatCompletion = self.client.chat.completions.create(
                     model=self.model,
                     tools=self.tools,
-                    messages=self.messages,
+                    messages=self.context.build(),
                 )
 
             for choice in response.choices:
                 message = choice.message
-                self.messages.append(message)
+                extra: dict[str, Any] = {}
+                if message.tool_calls:
+                    extra["tool_calls"] = [tool_call.model_dump() for tool_call in message.tool_calls]
+                self.context.append("assistant", message.content, **extra)
 
                 if (
                     choice.finish_reason == OpenAIResponseFinishReason.TOOL_CALLS.value
@@ -96,9 +83,11 @@ class Agent:
     def _execute_tool_calls(self, tool_calls: Any) -> None:
         for tool_call in tool_calls:
             name = tool_call.function.name
-            self.console.log(f"⛏ Initiating tool call: `{name}`")
+            raw_arguments = tool_call.function.arguments
+            self.console.log(f"⛏  {name}({raw_arguments})")
+
             try:
-                arguments = json.loads(tool_call.function.arguments)
+                arguments = json.loads(raw_arguments)
                 handler = self.tool_handlers.get(name)
                 if handler is None:
                     result: Any = {"error": f"Unknown tool: {name}"}
@@ -107,8 +96,8 @@ class Agent:
             except Exception as error:
                 result = {"error": str(error)}
 
-            self.context.append(
-                "tool",
-                json.dumps(result),
-                tool_call_id=tool_call.id,
-            )
+            result_text = json.dumps(result)
+            preview = result_text if len(result_text) <= 300 else f"{result_text[:300]}…"
+            self.console.log(f"   ↳ {preview}")
+
+            self.context.append("tool", result_text, tool_call_id=tool_call.id)
