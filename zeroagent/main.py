@@ -29,18 +29,36 @@ _load_dotenv(REPO_ROOT / ".env")
 
 from agent.loop import Agent
 from cli.repl import run
+from runtime.sandbox import DockerSandbox
+from tools.git import GIT_TOOL, GitTool
+from tools.shell import BASH_TOOL, BashTool
 from zeroagent.tools import getGutenbergBooksTool, search_gutenberg_books
 
 
 def main() -> None:
-    """Wire up the Gutenberg-librarian agent and hand it to the CLI."""
+    """Wire up a small agent plus an isolated shell workspace."""
+    sandbox = DockerSandbox()
+
+    bash = BashTool(sandbox)
+    git = GitTool(sandbox)
     agent = Agent(
         model="deepseek/deepseek-v4.1-flash",
-        system="You're a helpful librarian who fetches books from the remote Gutendex library",
-        tools=[getGutenbergBooksTool],
-        tool_handlers={"search_gutenberg_books": search_gutenberg_books},
+        system=(
+            "You're a helpful assistant. You can search Project Gutenberg, or work in "
+            "a disposable isolated Linux workspace using Bash and Git. The workspace "
+            "has no host files and no network."
+        ),
+        tools=[getGutenbergBooksTool, BASH_TOOL, GIT_TOOL],
+        tool_handlers={
+            "search_gutenberg_books": search_gutenberg_books,
+            "run_bash": bash.run_bash,
+            "run_git": git.run_git,
+        },
     )
-    run(agent)
+    try:
+        run(agent)
+    finally:
+        sandbox.close()
 
 
 if __name__ == "__main__":

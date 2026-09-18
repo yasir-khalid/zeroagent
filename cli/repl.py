@@ -11,6 +11,7 @@ from __future__ import annotations
 from rich.console import Console
 
 from agent.loop import Agent
+from cli.display import TerminalDisplay
 
 try:
     from pyfiglet import figlet_format
@@ -20,16 +21,17 @@ except ImportError:  # The banner is cosmetic; don't make it a hard dependency.
 console = Console()
 
 
-def _print_banner(model: str) -> None:
+def _print_banner(display: TerminalDisplay, model: str) -> None:
     text = figlet_format("ZeroAgent", font="slant") if figlet_format else "ZeroAgent"
-    console.print(f"[bold red]{text}[/bold red]")
-    console.print(model, style="bold red")
-    console.print("Ask something. Empty line or Ctrl-C to quit.\n", style="dim")
+    display.banner(model, text)
 
 
 def run(agent: Agent) -> None:
     """Read a message, run it through the agent, print the reply. Repeat."""
-    _print_banner(agent.model)
+    display = TerminalDisplay(console)
+    agent.console = console
+    agent.on_tool_event = display.tool_event
+    _print_banner(display, agent.model)
 
     while True:
         try:
@@ -41,7 +43,8 @@ def run(agent: Agent) -> None:
         if not message:
             break
 
+        display.user_message(message)
         response = agent(message)
         if response:
-            console.print(response, style="green")
+            display.assistant_message(response)
         console.print()
