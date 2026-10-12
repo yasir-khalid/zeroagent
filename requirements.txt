@@ -1,5 +1,4 @@
 httpx
+openai
 pydantic
 rich
-pyfiglet
-termcolor
